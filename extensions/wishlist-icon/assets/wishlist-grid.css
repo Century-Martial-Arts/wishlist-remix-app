@@ -1,0 +1,116 @@
+.wishlist-grid-heart {
+  --wishlist-grid-active-color: #cf202f;
+  position: absolute;
+  z-index: 6;
+  top: 8px;
+  right: 8px;
+  display: grid;
+  width: 44px;
+  height: 44px;
+  padding: 8px;
+  margin: 0;
+  place-items: center;
+  appearance: none;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #000;
+  cursor: pointer;
+  line-height: 1;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 150ms ease;
+}
+
+.wishlist-pixel-heart {
+  shape-rendering: crispEdges;
+  fill: transparent;
+  stroke: currentcolor;
+  stroke-width: 2px;
+  stroke-linecap: butt;
+  stroke-linejoin: miter;
+}
+
+.wishlist-pixel-heart path {
+  vector-effect: non-scaling-stroke;
+}
+
+.wishlist-grid-heart .wishlist-pixel-heart {
+  display: block;
+  width: 28px;
+  height: 28px;
+  overflow: visible;
+  transition:
+    fill 150ms ease,
+    stroke 150ms ease,
+    color 150ms ease;
+}
+
+.wishlist-grid-heart[aria-pressed="true"] .wishlist-pixel-heart {
+  color: var(--wishlist-grid-active-color);
+  fill: currentcolor;
+  stroke: currentcolor;
+}
+
+.wishlist-grid-heart:hover:not(:disabled) {
+  background: rgb(255 255 255 / 70%);
+}
+
+.wishlist-grid-heart:focus-visible {
+  outline: 2px solid #000;
+  outline-offset: -4px;
+  background: rgb(255 255 255 / 85%);
+}
+
+.wishlist-grid-heart:disabled,
+.wishlist-grid-heart[data-wishlist-state="unknown"] {
+  opacity: 0.55;
+}
+
+.wishlist-grid-heart:disabled {
+  cursor: progress;
+}
+
+.wishlist-grid-status {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+.wishlist-header-heart {
+  flex: 0 0 auto;
+  color: inherit;
+  text-decoration: none;
+}
+
+.wishlist-header-heart .wishlist-pixel-heart {
+  width: 26px;
+  height: 26px;
+  fill: none;
+  stroke: currentcolor;
+  pointer-events: none;
+}
+
+.wishlist-header-heart:focus-visible {
+  outline: 2px solid currentcolor;
+  outline-offset: 2px;
+}
+
+@media screen and (min-width: 768px) {
+  .wishlist-grid-heart {
+    top: 12px;
+    right: 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wishlist-grid-heart,
+  .wishlist-grid-heart .wishlist-pixel-heart {
+    transition: none;
+  }
+}

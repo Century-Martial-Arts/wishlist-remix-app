@@ -1,0 +1,42 @@
+{%- liquid
+  assign wishlist_login_url = routes.storefront_login_url | default: routes.account_login_url
+-%}
+
+<script
+  type="application/json"
+  data-wishlist-grid-config
+  {{ block.shopify_attributes }}
+>
+  {
+    "appUrl": {{ 'https://wishlist-remix-app.onrender.com' | json }},
+    "customerId": {% if customer %}{{ customer.id | json }}{% else %}null{% endif %},
+    "shop": {{ shop.permanent_domain | json }},
+    "loginUrl": {{ wishlist_login_url | json }},
+    "accountUrl": {{ routes.account_url | json }},
+    "wishlistUrl": {% if block.settings.wishlist_page != blank %}{{ block.settings.wishlist_page.url | json }}{% else %}null{% endif %},
+    "activeColor": {{ block.settings.colour | json }}
+  }
+</script>
+<script src="{{ 'wishlist-grid.js' | asset_url }}" defer></script>
+
+{% schema %}
+{
+  "name": "Wishlist hearts",
+  "target": "body",
+  "stylesheet": "wishlist-grid.css",
+  "settings": [
+    {
+      "type": "color",
+      "id": "colour",
+      "label": "Saved heart color",
+      "default": "#cf202f"
+    },
+    {
+      "type": "page",
+      "id": "wishlist_page",
+      "label": "Wishlist page",
+      "info": "Create the storefront wishlist page first, then select it here."
+    }
+  ]
+}
+{% endschema %}
