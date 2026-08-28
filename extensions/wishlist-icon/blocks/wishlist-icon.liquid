@@ -1,8 +1,16 @@
 <div class="wishlist-inspire__icon wishlist-inspire__icon--align-{{ block.settings.alignment }}" x-data="wishlist">
   {% if customer %}
     <button type="button" @click.debounce="addToWishlist()">
-      <svg class="wishlist-inspire__icon--svg" viewBox="0 0 24 24" stroke-width="1" stroke="#000" :fill="wishlisted ? '{{ block.settings.colour }}' : '#fff' ">
-        <path d="M12 21.35l-1.45-1.32C5.4 15.73 2 12.27 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.77-3.4 7.23-8.55 11.53L12 21.35z"/>
+      <svg
+        class="wishlist-inspire__icon--svg"
+        viewBox="0 0 31 31"
+        shape-rendering="crispEdges"
+        style="--wishlist-inspire-active-color: {{ block.settings.colour }};"
+        :class="{ 'is-wishlisted': wishlisted }"
+        aria-hidden="true"
+        focusable="false"
+      >
+        <path d="M6 5H12V8H15V11H16V8H19V5H25V8H28V14H25V17H22V20H19V23H16V26H15V23H12V20H9V17H6V14H3V8H6Z"/>
       </svg>
 {% if block.settings.text != blank %}
   <span class="wishlist-inspire__icon--text wishlist-inspire__icon--text--{{ block.settings.text_size }}">
@@ -128,8 +136,27 @@
     align-items: center;
   }
   .wishlist-inspire__icon--svg{
-    width: 2rem;
-    height: 2rem;
+    width: 31px;
+    height: 31px;
+    overflow: visible;
+    color: #000;
+    fill: transparent;
+    stroke: currentcolor;
+    stroke-width: 2px;
+    stroke-linecap: butt;
+    stroke-linejoin: miter;
+    shape-rendering: crispEdges;
+    transition: fill 150ms ease, stroke 150ms ease, color 150ms ease;
+  }
+
+  .wishlist-inspire__icon--svg path{
+    vector-effect: non-scaling-stroke;
+  }
+
+  .wishlist-inspire__icon--svg.is-wishlisted{
+    color: var(--wishlist-inspire-active-color);
+    fill: currentcolor;
+    stroke: currentcolor;
   }
 
 .wishlist-inspire__icon--text--small {
@@ -194,4 +221,3 @@
   ]
 }
 {% endschema %}
-

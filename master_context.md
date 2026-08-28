@@ -10,7 +10,7 @@ All real custom logic lives in exactly four places. Everything else in `app/` is
 - `app/routes/app._index.jsx` — the one admin screen (read-only analytics dashboard)
 - `app/routes/api.wishlist.jsx` — the wishlist REST API (public, consumed by the theme extension)
 - `app/routes/wishlist-page.jsx` — an unfinished/unstyled scaffold route, superseded by the theme extension's listing block; treat as dead code unless told otherwise
-- `extensions/wishlist-icon/` — the theme app extension (2 Liquid blocks) that shoppers actually interact with
+- `extensions/wishlist-icon/` — the theme app extension (product-page, listing, and shared grid/cart embed blocks) that shoppers actually interact with
 
 ## 2. Commands
 
@@ -52,10 +52,13 @@ Know these exact behaviors before modifying this route; they're easy to break fu
 
 ## 6. Theme extension gotchas — `extensions/wishlist-icon/`
 
-- The app's base URL (`https://wishlist-remix-app.onrender.com`) is **hardcoded directly in the Liquid/JS** in both blocks (`wishlist-icon.liquid`, `wishlist-list.liquid`) — it is not read from a theme setting, app proxy, or env-driven template variable. Changing hosting means editing and redeploying the extension itself, not flipping an env var.
+- The app's base URL (`https://wishlist-remix-app.onrender.com`) is **hardcoded directly in the Liquid/JS** in all three active extension blocks — it is not read from a theme setting, app proxy, or env-driven template variable. Changing hosting means editing and redeploying the extension itself, not flipping an env var.
 - `wishlist-list.liquid` makes its own **client-side, unauthenticated Storefront GraphQL calls** directly to `https://${shopDomain}/api/2025-07/graphql.json` to resolve live price/availability/title — this traffic never touches this app's own API/DB. If prices/availability look wrong, check this path, not `api.wishlist.jsx`.
 - `wishlist-icon.liquid` uses Alpine.js from a CDN; `wishlist-list.liquid` uses vanilla JS. There's no shared JS module between them — duplicated logic (e.g. fetch calls) lives in both files independently.
-- Feature is entirely gated on `{% if customer %}` — there is no anonymous/guest wishlist path anywhere in the extension or API. Don't assume a cookie- or localStorage-based identity exists; it doesn't.
+- `wishlist-grid-embed.liquid` owns the shared pixel-heart controller used by product grids, cart line items, and wishlist header navigation. The theme supplies only inert product/variant/title metadata and mount hooks; keep wishlist API behavior and heart state in `wishlist-grid.js`.
+- The extension stylesheet hides `.wishlist-header-heart` and `[data-wishlist-header-link]` inside `[data-site-header]` below 768px. Keep that responsive header behavior app-owned so desktop, compressed, and mobile injection containers stay consistent across storefront themes.
+- Cart hearts mount only inside `cart-element[data-cart-page]`, use `data-wishlist-cart-item` and `data-wishlist-cart-actions`, and must remount after AJAX cart replacements. The cart drawer intentionally remains unchanged.
+- Wishlist identity remains customer-based; there is no cookie- or localStorage-backed guest wishlist. The product-page block is gated by `{% if customer %}`, while shared grid/cart hearts render for guests and send activation through the configured Shopify login URL.
 - `snippets/stars.liquid` and `assets/thumbs-up.png` are unused leftovers, not part of the wishlist feature — don't wire new work through them assuming they're active.
 
 ## 7. Deployment — confirm before assuming a target

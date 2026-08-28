@@ -3,6 +3,9 @@
 (() => {
   const CARD_SELECTOR = "[data-wishlist-grid-product-card]",
     MEDIA_SELECTOR = "[data-product-media-container]",
+    CART_ITEM_SELECTOR = "[data-wishlist-cart-item]",
+    CART_ACTIONS_SELECTOR = "[data-wishlist-cart-actions]",
+    CART_PAGE_SELECTOR = "cart-element[data-cart-page]",
     SWATCH_SELECTOR = "[data-swatch-variant]",
     BUTTON_SELECTOR = "[data-wishlist-grid-heart]",
     HEADER_SELECTOR = "[data-site-header]",
@@ -47,6 +50,7 @@
     start() {
       (this.ensureLiveRegion(),
         this.initializeCards(document),
+        this.initializeCartItems(document),
         this.initializeHeaders(document),
         document.addEventListener("click", this.handleClick, !0),
         document.addEventListener("click", this.handleSwatchClick),
@@ -82,6 +86,15 @@
         root
           .querySelectorAll(CARD_SELECTOR)
           .forEach((card) => this.mountCard(card)));
+    }
+    initializeCartItems(root) {
+      (root instanceof Element || root instanceof Document) &&
+        (root instanceof Element &&
+          root.matches(CART_ITEM_SELECTOR) &&
+          this.mountCartItem(root),
+        root
+          .querySelectorAll(CART_ITEM_SELECTOR)
+          .forEach((item) => this.mountCartItem(item)));
     }
     initializeHeaders(root) {
       if (!(root instanceof Element || root instanceof Document)) return;
@@ -176,26 +189,63 @@
         variantId = card.dataset.wishlistVariantId,
         media = card.querySelector(MEDIA_SELECTOR);
       if (!productId || !variantId || !media) return;
+      this.mountHeart({
+        container: media,
+        productId,
+        variantId,
+        productTitle: card.dataset.wishlistProductTitle,
+        className: "wishlist-grid-heart",
+      });
+    }
+    mountCartItem(item) {
+      if (
+        !item.closest(CART_PAGE_SELECTOR) ||
+        item.querySelector(BUTTON_SELECTOR)
+      )
+        return;
+      const productId = item.dataset.wishlistProductId,
+        variantId = item.dataset.wishlistVariantId,
+        actions = item.querySelector(CART_ACTIONS_SELECTOR);
+      if (!productId || !variantId || !actions) return;
+      this.mountHeart({
+        container: actions,
+        productId,
+        variantId,
+        productTitle: item.dataset.wishlistProductTitle,
+        className: "wishlist-grid-heart wishlist-grid-heart--cart",
+        isCart: !0,
+      });
+      item.classList.add("wishlist-cart-item--mounted");
+    }
+    mountHeart({
+      container,
+      productId,
+      variantId,
+      productTitle,
+      className,
+      isCart = !1,
+    }) {
       const button = document.createElement("button");
       ((button.type = "button"),
-        (button.className = "wishlist-grid-heart"),
+        (button.className = className),
         (button.dataset.wishlistGridHeart = ""),
+        isCart && (button.dataset.wishlistCartHeart = ""),
         (button.dataset.wishlistProductId = productId),
         (button.dataset.wishlistVariantId = variantId),
-        (button.dataset.wishlistProductTitle =
-          card.dataset.wishlistProductTitle || "this item"),
+        (button.dataset.wishlistProductTitle = productTitle || "this item"),
         button.style.setProperty(
           "--wishlist-grid-active-color",
           this.config.activeColor,
         ),
         (button.innerHTML = PIXEL_HEART_SVG),
-        media.appendChild(button),
+        container.appendChild(button),
         this.updateButton(button));
     }
     handleMutations(mutations) {
       mutations.forEach((mutation) => {
         mutation.addedNodes.forEach((node) => {
           node instanceof Element && this.initializeCards(node);
+          node instanceof Element && this.initializeCartItems(node);
           node instanceof Element && this.initializeHeaders(node);
         });
       });
@@ -371,6 +421,7 @@
   if (window[CONTROLLER_KEY]) {
     (window[CONTROLLER_KEY].updateConfig(config),
       window[CONTROLLER_KEY].initializeCards(document),
+      window[CONTROLLER_KEY].initializeCartItems(document),
       window[CONTROLLER_KEY].initializeHeaders(document),
       window[CONTROLLER_KEY].refreshAllButtons());
     return;

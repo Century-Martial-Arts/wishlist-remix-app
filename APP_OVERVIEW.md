@@ -11,7 +11,8 @@
 ### For shoppers (storefront)
 
 - A heart-shaped **"Add to Wishlist" button** appears on product pages via a theme block (`extensions/wishlist-icon/blocks/wishlist-icon.liquid`). Clicking it adds/removes the current product variant from the shopper's wishlist.
-- **Login required** — the button only works for logged-in customers. Logged-out visitors see "Please log in to add to wishlist" instead of the button.
+- The shared wishlist embed adds the same stateful pixel-heart to product-grid cards and full cart-page line items. Cart toggles do not remove merchandise from the cart, and the cart drawer remains unchanged.
+- **Login required** — wishlist writes only work for logged-in customers. The product-page block shows a login prompt to guests; shared product-grid and cart hearts send guest activation through Shopify's login URL.
 - A separate **wishlist listing page** (theme block `extensions/wishlist-icon/blocks/wishlist-list.liquid`) shows everything a customer has saved: product image, title, variant, live price and availability (fetched directly from Shopify's Storefront GraphQL API), plus an "Add to Cart" link.
 - **Notes / Has / Needs** — a distinctive feature beyond a typical wishlist. Each saved item can have a free-text note and two numbers: **Has** (how many the customer already owns) and **Needs** (how many they still want). This reads like it's built for gear/uniform tracking (e.g. "I have 2 size-4 gis, I need 1 more") rather than generic gift-list use.
 - No guest/anonymous wishlists — there's no cookie- or device-based fallback, so a shopper must be a logged-in customer to use any of this.
@@ -106,12 +107,13 @@ All writes require `customerId`, `variantId`, `shop` — missing fields return `
 
 ### 2.5 Storefront extension (`extensions/wishlist-icon/`)
 
-A single **theme app extension** (`type = "theme"`) with two blocks:
+A single **theme app extension** (`type = "theme"`) with three blocks:
 
 - **`wishlist-icon.liquid`** — the add/remove heart button. Merchant-configurable via the theme editor: button text, text size, alignment, icon color (defaults to Century red `#cf202f`). Checks wishlist status on load via a `GET` call, then `POST`/`DELETE`s on click.
 - **`wishlist-list.liquid`** — the wishlist page grid. No configurable settings; layout, copy, and behavior are hardcoded. Includes the Notes/Has/Needs modal, which `PUT`s back to the API.
+- **`wishlist-grid-embed.liquid`** — the app embed that owns product-grid and cart hearts plus wishlist header navigation. It observes AJAX-rendered content and synchronizes all controls for the same variant. Header wishlist navigation is available at 768px and above and is hidden on smaller screens by the extension stylesheet.
 
-Both blocks hardcode the app's URL (`https://wishlist-remix-app.onrender.com`) directly in the Liquid/JS rather than reading it from a theme setting or app proxy.
+All three blocks hardcode the app's URL (`https://wishlist-remix-app.onrender.com`) directly in the Liquid/JS rather than reading it from a theme setting or app proxy.
 
 Also present but not part of the wishlist feature: `snippets/stars.liquid` (a star-rating snippet) and `assets/thumbs-up.png` — both appear to be unused leftovers from a different feature or theme.
 

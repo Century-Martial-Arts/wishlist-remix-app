@@ -70,6 +70,29 @@
   cursor: progress;
 }
 
+/* Cart hearts use the same stateful pixel icon as product cards. The theme
+   supplies only metadata and an action-column mount point. */
+cart-element[data-cart-page]
+  .wishlist-cart-item--mounted
+  [data-wishlist-cart-actions] {
+  justify-content: flex-end;
+}
+
+cart-element[data-cart-page] .wishlist-grid-heart.wishlist-grid-heart--cart {
+  top: 8px;
+  right: 52px;
+  border-radius: 0;
+}
+
+cart-element[data-cart-page]
+  .wishlist-cart-item--mounted
+  .cart__item__remove {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  margin: 0;
+}
+
 .wishlist-grid-status {
   position: absolute !important;
   width: 1px !important;
@@ -105,6 +128,24 @@
   .wishlist-grid-heart {
     top: 12px;
     right: 12px;
+  }
+
+  cart-element[data-cart-page] .wishlist-grid-heart.wishlist-grid-heart--cart {
+    top: 8px;
+    right: 52px;
+  }
+}
+
+@media only screen and (max-width: 767px) {
+  [data-site-header] .wishlist-header-heart,
+  [data-site-header] [data-wishlist-header-link] {
+    display: none !important;
+  }
+
+  cart-element[data-cart-page]
+    .wishlist-cart-item--mounted
+    .cart__item__content {
+    padding-right: 96px;
   }
 }
 
