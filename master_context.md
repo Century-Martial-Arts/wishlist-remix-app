@@ -61,7 +61,7 @@ No test suite / no `npm test` in this repo.
 
 ## 7. Deployment
 
-Conflicting artifacts: Postgres + Dockerfile/`docker-start` + production `application_url` look current; Fly workflow + Litestream/SQLite helpers look leftover (no `fly.toml`). **Confirm the live host with the owner** before changing deploy paths. This repo is public — do not document secrets, internal admin URLs, or credentials in markdown.
+Production backend: **Render** Docker web service in the **Century** workspace (starter plan, `./Dockerfile`, auto-deploy on every commit to `main`). Production DB: Render-managed **PostgreSQL 17**; `DATABASE_URL` is set on the service Environment tab. Shopify config/extensions still need `npm run deploy`. Fly workflow + Litestream/SQLite helpers are leftovers only. Known issue: Render may still be linked to the old `UribeJr` GitHub repo — see `docs/deployment.md`. This repo is public — do not document hostnames, service IDs, dashboard links, secrets, or credentials in markdown.
 
 ## 8. Compliance gaps
 

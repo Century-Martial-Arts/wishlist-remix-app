@@ -160,7 +160,7 @@ Facts that affect feature work:
 - **Listing trusts Storefront GraphQL for merchandising fields.** The app DB stores ids and notes only, so price/availability stay current without a product sync pipeline.
 - **Hardcoded production app URL in extension assets.** Simple operationally for a single hosted backend; costly if the host URL changes (requires extension edit + `shopify app deploy`).
 - **Single shared database, multi-shop rows.** `shop` on each wishlist row supports several Century storefronts. The dashboard is built as an internal aggregate view.
-- **Postgres in schema; Docker start runs migrations.** `docker-start` → `setup` → `remix-serve`. Older SQLite/Litestream/Fly files remain in the tree but do not match the current Prisma provider.
+- **Render + Postgres 17; Docker start runs migrations.** Production is a Render Docker web service in the Century workspace with a Render-managed Postgres 17 database. `docker-start` → `setup` → `remix-serve` on each auto-deploy from `main`. Older SQLite/Litestream/Fly files in the tree are leftovers only.
 
 ## Admin and dead code map
 
@@ -172,7 +172,7 @@ Facts that affect feature work:
 | `app/routes/_index/` | Template marketing/install landing |
 | `extensions/.../snippets/stars.liquid`, `thumbs-up.png` | Unused leftovers |
 | `Settings` Prisma model | Unused |
-| `dbsetup.js`, `litestream.yml`, Fly workflow | Leftover deploy path relative to current Postgres schema |
+| `dbsetup.js`, `litestream.yml`, Fly workflow | Leftover; production is Render (see [deployment.md](deployment.md)) |
 
 ## Limitations and known gaps
 
@@ -185,12 +185,13 @@ Facts that affect feature work:
 - **No automated tests.**
 - **Webhook API version (toml `2025-04`) ≠ server `ApiVersion.January25`.**
 - **Dockerfile Node 23** vs broader `engines` range.
-- **Mixed deploy artifacts** — confirm live hosting before changing deploy code ([deployment.md](deployment.md)).
+- **Leftover Fly/Litestream files** — not used in production; cleanup only ([deployment.md](deployment.md)).
+- **Render GitHub link may still point at the old `UribeJr` repo** — re-link required so auto-deploy keeps working ([deployment known issue](deployment.md#known-issue-github-repository-link)).
 
 ## Open questions
 
-1. Confirm production host, deploy credentials, and whether the Fly GitHub Action is retired.
-2. Confirm whether App Store distribution remains intentional.
-3. Confirm compliance plan for GDPR webhooks and uninstall data retention.
-4. Confirm whether PUT should be shop-scoped and whether POST should persist `has`/`needs`.
-5. Confirm how many live shops are expected and whether the dashboard display-name map should stay in code.
+1. Confirm whether App Store distribution remains intentional.
+2. Confirm compliance plan for GDPR webhooks and uninstall data retention.
+3. Confirm whether PUT should be shop-scoped and whether POST should persist `has`/`needs`.
+4. Confirm how many live shops are expected and whether the dashboard display-name map should stay in code.
+5. Confirm when the Render ↔ GitHub re-link to Century-Martial-Arts will be completed.

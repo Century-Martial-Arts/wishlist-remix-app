@@ -1,43 +1,34 @@
 # Deployment
 
-How this app reaches production: the **hosted Remix backend**, and the **Shopify app version** (config + theme extension). Both matter. For the human workflow, see [getting-started.md](getting-started.md).
+How this app reaches production: the **Render-hosted Remix backend**, and the **Shopify app version** (config + theme extension). Both matter. For the human workflow, see [getting-started.md](getting-started.md).
 
 ## What "production" means here
 
-| Piece | Source of truth in repo | How it ships |
+| Piece | Source of truth | How it ships |
 |---|---|---|
-| Remix server | `Dockerfile`, `npm run docker-start`, `npm run start` | Deploy container/build to the production host |
-| Database | `prisma/schema.prisma` (PostgreSQL) | `prisma migrate deploy` (also invoked by `docker-start` → `setup`) |
-| App config (URL, scopes, webhooks) | `shopify.app.toml` | `npm run deploy` (`shopify app deploy`) |
+| Remix server | `Dockerfile`, `npm run docker-start`, `npm run start` | Render Docker web service; **auto-deploys on every commit to `main`** |
+| Database | `prisma/schema.prisma` (PostgreSQL) | Render-managed Postgres 17; `prisma migrate deploy` runs via `docker-start` → `setup` on each deploy |
+| App config (URL, scopes, webhooks) | `shopify.app.toml` | `npm run deploy` (`shopify app deploy`) — **not** automatic with git merge |
 | Theme extension | `extensions/wishlist-icon/` | Same `shopify app deploy` |
 
-`shopify.app.toml` on `main` sets `application_url` and auth callback URLs to the production host. Treat that file as the declared production app URL.
+`shopify.app.toml` on `main` sets `application_url` and auth callback URLs to the production app URL. Treat that file as the declared production app URL (this public repo's docs do not repeat hostnames).
 
-## Backend host (current evidence)
+## Backend: Render
 
-**Looks current**
+Confirmed hosting:
 
-- `Dockerfile` (`node:23.10.0-alpine`) builds the app and runs `npm run docker-start`
-- `docker-start` = `prisma generate && prisma migrate deploy` then `remix-serve`
-- Prisma provider is `postgresql`
-- `application_url` in `shopify.app.toml` points at a hosted web service (not a Cloudflare trycloudflare tunnel on `main`)
+- **Platform:** Render, workspace **Century** (a team — new developers need an invite to that workspace).
+- **Service:** Docker web service built from `./Dockerfile` at the repo root (starter plan, Oregon region, 1 instance). Refer to it as the wishlist service in the Century Render workspace.
+- **Database:** Render-managed **PostgreSQL 17**. Production `DATABASE_URL` is that database's connection string, set on the service's **Environment** tab.
+- **Container entry:** `Dockerfile` uses `node:23.10.0-alpine` and `CMD ["npm", "run", "docker-start"]`. That runs `prisma generate && prisma migrate deploy`, then `remix-serve`.
+- **Auto-deploy:** **ON**, for every commit to **`main`**. Merging a PR to `main` deploys the backend automatically. Nobody runs a manual backend deploy for routine releases.
+- **Env vars:** edited in the Render dashboard on the service's **Environment** tab (names only below — get values from the owner).
 
-**Looks leftover**
-
-- `.github/workflows/fly-deploy.yml` (Fly deploy on push to `main`)
-- `litestream.yml`, `dbsetup.js`, `@flydotio/litestream`, package.json `dockerfile.litestream`
-- No `fly.toml` in the repo
-- Schema is no longer SQLite
-
-**Do not assume.** Confirm with the owner which host is live, how deploys are triggered, and whether the Fly Action is disabled or still somehow wired. Until confirmed, prefer the owner's runbook over inventing a new pipeline.
-
-### Environment variables on the host
-
-Set at least (names only — get values from the owner):
+### Environment variables on the service
 
 | Name | Role |
 |---|---|
-| `DATABASE_URL` | Production Postgres |
+| `DATABASE_URL` | Production Postgres connection string from the Render-managed database |
 | `SHOPIFY_API_KEY` | From Partners app credentials |
 | `SHOPIFY_API_SECRET` | From Partners app credentials |
 | `SHOPIFY_APP_URL` | Must match the public app URL merchants hit |
@@ -46,7 +37,26 @@ Set at least (names only — get values from the owner):
 
 Optional: `SHOP_CUSTOM_DOMAIN` per `shopify.server.js`.
 
+### Backend rollback
+
+In the Render dashboard: open the wishlist service → **Events** / **Deploys** → roll back to a previous deploy. Alternatively, revert the commit on `main` (that triggers another auto-deploy).
+
+### Known issue: GitHub repository link
+
+The Render service is still linked to the **old** GitHub repo URL under `UribeJr` from before the move to **Century-Martial-Arts**. The owner must re-link the service to `Century-Martial-Arts/wishlist-remix-app` (Render dashboard → service **Settings** → **Repository**) and ensure Render's GitHub app has access to the Century-Martial-Arts org. Until that is done, **auto-deploy may stop** after the old remote stops receiving pushes.
+
+### Leftover Fly / Litestream files (cleanup only)
+
+These are **not** the production path. Safe to ignore for shipping; remove only with an agreed cleanup PR:
+
+- `.github/workflows/fly-deploy.yml`
+- `litestream.yml`, `dbsetup.js`
+- `@flydotio/litestream` and package.json `dockerfile.litestream`
+- No `fly.toml` exists
+
 ## Shopify app deploy (extensions + config)
+
+Merging to `main` does **not** release Shopify config or the theme extension. From a clean `main` (or the release commit) with the correct toml linked:
 
 ```sh
 git checkout main
@@ -60,33 +70,29 @@ After deploy:
 
 1. Partners → Apps → this app → **Versions** — confirm the new version is released.
 2. Verify theme embeds/blocks on the live theme.
-3. If you changed the hardcoded extension app URL, confirm storefront network calls hit the new host.
+3. If you changed the hardcoded extension app URL, confirm storefront network calls hit the production backend.
 
 ### Rolling back an app version
 
-Partners Dashboard → app → **Versions** → release a previous version. Backend host rollbacks are separate (redeploy previous image/release).
+Partners Dashboard → app → **Versions** → release a previous version. Backend rollbacks are separate (Render deploy rollback above).
 
 ## Scope and webhook changes
 
 - Editing `[access_scopes]` requires `shopify app deploy` and merchant re-approval on each shop.
 - Webhook subscriptions in the toml update on deploy (app-specific webhooks).
-- Changing only Remix route code without toml/extension changes still needs a **backend** deploy; it does not need a new extension version.
+- Changing only Remix route code without toml/extension changes ships with the **Render auto-deploy** on merge to `main`; it does not need a new extension version.
 
 ## Database migrations
 
 1. Add a migration under `prisma/migrations/` when the schema changes.
 2. Test `npm run setup` against a non-production database.
-3. Backup production before migrate.
-4. Ship the migration with the backend release. If production uses `docker-start`, migrate runs on container start — still coordinate consciously.
-
-## CI note
-
-The only workflow in `.github/workflows/` is `fly-deploy.yml`. There is no documented GitHub Actions pipeline for Render (or similar) in this repo. Ask the owner how production builds are actually triggered today.
+3. Backup production before migrate (Render Postgres; ask the owner for the backup/restore path they use).
+4. Merge to `main`. The new deploy runs `docker-start` → `prisma migrate deploy` automatically. Coordinate consciously — a bad migration can take production down on deploy.
 
 ## Open questions
 
-1. Exact production host dashboard and who can deploy.
-2. Whether GitHub Actions Fly deploy is active, disabled, or obsolete.
-3. Where production secrets live.
-4. Theme publish process after extension versions release.
-5. Purpose of the remote `production` git branch (it appears behind `main` as an old snapshot).
+Hosting and env-var location are confirmed above. Still open:
+
+1. Theme publish process after extension versions release (who publishes / syncs the live theme).
+2. Purpose of the remote `production` git branch (it appears behind `main` as an old snapshot).
+3. When the Render ↔ GitHub re-link to Century-Martial-Arts will be completed.

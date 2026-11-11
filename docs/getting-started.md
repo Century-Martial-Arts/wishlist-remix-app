@@ -20,8 +20,8 @@ Work top to bottom. Check each box when done.
 1. [ ] Invited to the **Century-Martial-Arts** GitHub org with access to `wishlist-remix-app`
 2. [ ] Added to the Shopify **Partners** organization (Partners Dashboard → **Team**) with permission for this app
 3. [ ] Access to a **development store** and (when you need to verify production) the **live store** Admin
-4. [ ] Access to the **production host** and **Postgres database** (ask the owner — see [Open questions](#open-questions))
-5. [ ] Env var values from the owner (names only in this repo: see [`.env.example`](../.env.example))
+4. [ ] Invited to the **Century** Render workspace (needed to see the wishlist service, logs, env vars, and deploys)
+5. [ ] Env var values from the owner for local work (names only in this repo: see [`.env.example`](../.env.example)); production values live on the Render service **Environment** tab
 6. [ ] Node, npm, Git, and Shopify CLI installed
 7. [ ] Repo cloned, deps installed, `.env` filled, Prisma set up
 8. [ ] CLI linked to the **existing** Partners app (not a new app)
@@ -41,8 +41,8 @@ Ask the owner (or your lead) for each of these before spending time on tooling:
 | App permissions for **WishlistFu** (`handle`: `save-for-later-wishlist`) | Install on stores, deploy versions | Partners admin |
 | Development store | Local `shopify app dev` and theme testing | Partners / store owner |
 | Live store Admin (when verifying releases) | Confirm hearts and listing on production | Store owner |
-| Production host + database | Deploy backend, run migrations, read logs | Owner — hosting is not fully spelled out in-repo |
-| Env values | `DATABASE_URL` and production Shopify secrets | Owner (never commit them) |
+| Century Render workspace | See the wishlist Docker web service, deploys, logs, and Environment tab | Render workspace admin / owner |
+| Env values for local `.env` | `DATABASE_URL` (use a non-production DB unless the owner says otherwise) and any Shopify values not injected by the CLI | Owner (never commit them) |
 
 **App identity (from `shopify.app.toml` on `main`):**
 
@@ -207,18 +207,24 @@ Then open a pull request against **`main`** on GitHub. Wait for review before me
 
 ## 7. Releasing to the live app
 
-Shipping has **two parts**. Skipping either leaves production half-updated.
+Shipping has **two parts**. Skipping either leaves production half-updated. Details: [deployment.md](deployment.md).
 
 ### A. Deploy the web/backend (Remix server + database)
 
-1. Confirm with the owner which host is live (repo signals point at a containerized host using the `Dockerfile` + `npm run docker-start`; older Fly.io workflow files still exist — see [deployment.md](deployment.md)).
-2. Set/verify production env vars on that host (`DATABASE_URL`, `SHOPIFY_API_KEY`, `SHOPIFY_API_SECRET`, `SHOPIFY_APP_URL`, `SCOPES`, `NODE_ENV=production`).
-3. Deploy the new server build with whatever process the owner uses (host dashboard, CI, or CLI).
-4. `docker-start` runs `npm run setup` then `npm run start`, so migrations apply on container start **if** that entrypoint is what production uses. Still treat production migrations as sensitive — confirm before relying on auto-migrate.
+The backend is a **Render Docker web service** in the **Century** Render workspace (starter plan, built from `./Dockerfile`). Production data is a **Render-managed PostgreSQL 17** database; `DATABASE_URL` on the service **Environment** tab is that database's connection string.
+
+1. Merge your PR to **`main`**. Render **auto-deploys** on every commit to `main` — you do **not** run a manual backend deploy for routine releases.
+2. In the Century Render workspace, open the wishlist service → watch the new deploy until it is live. The container runs `npm run docker-start` (`prisma migrate deploy`, then `remix-serve`).
+3. Production env vars (`DATABASE_URL`, `SHOPIFY_API_KEY`, `SHOPIFY_API_SECRET`, `SHOPIFY_APP_URL`, `SCOPES`, `NODE_ENV=production`, …) are edited only on the service **Environment** tab — never commit them.
+4. Treat schema migrations as sensitive: they run automatically on deploy via `docker-start`. Test migrations against a non-production database first.
+
+**Expected after merge:** a new deploy appears on the wishlist service; when it succeeds, the live app serves your backend changes.
+
+**If this fails:** check the deploy logs on the wishlist service. Also read the [known GitHub re-link issue](deployment.md#known-issue-github-repository-link) — the service may still point at the old `UribeJr` repo URL, which can stop auto-deploy.
 
 ### B. Release app config + theme extension (Partners)
 
-From a clean `main` (or the release commit) with the correct toml linked:
+Merging to `main` does **not** release Shopify config or the theme extension. From a clean `main` with the correct toml linked:
 
 ```sh
 npm run deploy
@@ -237,23 +243,24 @@ That runs `shopify app deploy`. Confirm the summary (extension `wishlist-icon`, 
 ### Roll back
 
 1. **App / extension:** Partners Dashboard → app → **Versions** → release a previous version.
-2. **Backend:** redeploy the previous host release / image.
+2. **Backend:** in the Render dashboard, open the wishlist service → **Events** / **Deploys** → roll back to a previous deploy (or revert the commit on `main`, which triggers another auto-deploy).
 3. **Database:** only roll back migrations with an explicit plan from the owner — there is no automated down-migration workflow documented here.
 
-**If this fails:** check host logs, Partners version errors, and whether the extension still hardcodes the old app URL. Scope changes need the merchant to re-approve the app.
+**If this fails:** check Render deploy logs, Partners version errors, and whether the extension still hardcodes the old app URL. Scope changes need the merchant to re-approve the app.
 
 ---
 
 ## 8. Safety checklist
 
 - [ ] Never point local `shopify app dev` at the **live** store for routine work — use a **dev store**.
-- [ ] Never commit secrets or real `.env` values.
-- [ ] Scope changes in `shopify.app.toml` require merchant re-approval after deploy.
-- [ ] Webhook and app URL changes ship with `shopify app deploy`, not only a host redeploy.
+- [ ] Never commit secrets or real `.env` values; production secrets stay on the Render **Environment** tab.
+- [ ] Merging to `main` auto-deploys the backend — review carefully before merge.
+- [ ] Scope changes in `shopify.app.toml` require merchant re-approval after `shopify app deploy`.
+- [ ] Webhook and app URL changes ship with `shopify app deploy`, not only a Render redeploy.
 - [ ] Theme extension URL is hardcoded — hosting moves need an extension edit + deploy.
-- [ ] Be careful with Prisma migrations on production Postgres; backup/confirm first.
+- [ ] Be careful with Prisma migrations on production Postgres 17; they run on deploy via `docker-start`.
 - [ ] Admin dashboard sees **all shops'** wishlist data — treat production Admin access as sensitive.
-- [ ] Do not "clean up" Fly/Litestream files or GDPR gaps casually without an agreed plan.
+- [ ] Do not "clean up" leftover Fly/Litestream files or GDPR gaps casually without an agreed plan.
 
 ---
 
@@ -288,24 +295,23 @@ Open a PR against `main`, request review, merge.
 
 ### 4. Deploy
 
-1. Deploy backend only if your change needs it (this Liquid-only change does **not**).
-2. Run `npm run deploy` to release the extension version.
+1. Merge to `main` if you also changed server code (this Liquid-only change does **not** need a backend change, but merging still auto-deploys whatever is on `main`).
+2. Run `npm run deploy` to release the **extension** version (required for this Liquid change).
 3. Verify on the live theme (you may need to refresh the block / theme publish process used by Century).
 
 ### 5. Roll back if needed
 
-Release the previous app version in Partners. Revert the git commit on a follow-up PR if the copy change should stay out of `main`.
+Release the previous app version in Partners. For backend rollbacks, use the wishlist service **Events** / **Deploys** in the Century Render workspace (or revert on `main`). Revert the git commit on a follow-up PR if the copy change should stay out of `main`.
 
 ---
 
 ## Open questions
 
-Mark these for the owner; they are not fully confirmed from the repo alone:
+Hosting, auto-deploy, and where production env vars live are confirmed in [deployment.md](deployment.md). Still open for the owner:
 
-1. **Exact production host and who has deploy access** — `shopify.app.toml` `application_url` points at a hosted service; `Dockerfile` + `docker-start` look current; `.github/workflows/fly-deploy.yml` + Litestream/SQLite files look leftover (no `fly.toml`).
-2. **Where production env vars are stored** (host dashboard, secrets manager, etc.).
-3. **Which database instance is production vs safe for local/dev**, and backup policy before migrations.
-4. **How the live theme is updated** after `shopify app deploy` (auto app embeds vs manual theme publish).
-5. **Whether `origin/production` is used for anything** — it currently looks like an old snapshot, not ahead of `main`.
-6. **Who is on the Partners team** and what role a new developer should receive.
-7. **Whether App Store distribution (`AppDistribution.AppStore` in code) is intentional** given the internal multi-store dashboard.
+1. **How the live theme is updated** after `shopify app deploy` (auto app embeds vs manual theme publish).
+2. **Whether `origin/production` is used for anything** — it currently looks like an old snapshot, not ahead of `main`.
+3. **Who is on the Partners team** and what role a new developer should receive.
+4. **Whether App Store distribution (`AppDistribution.AppStore` in code) is intentional** given the internal multi-store dashboard.
+5. **When the Render service will be re-linked** from the old `UribeJr` GitHub repo to `Century-Martial-Arts/wishlist-remix-app` (see [deployment known issue](deployment.md#known-issue-github-repository-link)).
+6. **Local/dev database** — which Postgres instance (if any) juniors should use instead of production, and the backup policy before production migrations.

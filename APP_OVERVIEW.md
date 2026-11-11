@@ -25,6 +25,6 @@ Shopify wishlist / "save for later" for Century Martial Arts storefronts.
 
 ## Status notes
 
-Still a focused single-feature app with known gaps (no guest wishlist, hardcoded extension app URL, no GDPR mandatory webhooks in-repo, admin dashboard aggregates all shops, mixed leftover deploy artifacts). See [docs/architecture.md#limitations-and-known-gaps](docs/architecture.md#limitations-and-known-gaps).
+Still a focused single-feature app with known gaps (no guest wishlist, hardcoded extension app URL, no GDPR mandatory webhooks in-repo, admin dashboard aggregates all shops, leftover Fly/Litestream files). Backend hosting is Render (Century workspace) + managed Postgres 17; see [docs/deployment.md](docs/deployment.md). Broader gaps: [docs/architecture.md#limitations-and-known-gaps](docs/architecture.md#limitations-and-known-gaps).
 
-Store domains, production host URLs, and credentials are intentionally omitted here — this repository is public. Read them from `shopify.app.toml` / the owner when you need specifics.
+Store domains, production hostnames, service IDs, dashboard links, and credentials are intentionally omitted here — this repository is public. Get those from the owner / Render workspace when you need them.

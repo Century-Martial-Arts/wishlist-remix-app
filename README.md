@@ -70,7 +70,7 @@ Then enable the theme app extension blocks on the development store theme and te
 | [docs/architecture.md](docs/architecture.md) | Understand the request paths, data model, design decisions and gaps |
 | [docs/extensions.md](docs/extensions.md) | Theme blocks, embeds, theme hooks, and preview notes |
 | [docs/api.md](docs/api.md) | Public `/api/wishlist` methods, payloads and gotchas |
-| [docs/deployment.md](docs/deployment.md) | Host the backend and release app/extension versions with Shopify CLI |
+| [docs/deployment.md](docs/deployment.md) | Render auto-deploy on `main`, env vars, Shopify app versions, rollback |
 
 ## Stack
 
@@ -80,7 +80,8 @@ Then enable the theme app extension blocks on the development store theme and te
 | Admin UI | Shopify Polaris 12 + App Bridge React 4 |
 | Storefront | Theme app extension (`extensions/wishlist-icon`) |
 | Auth | `@shopify/shopify-app-remix` (API version January 2025 in code) |
-| Database | PostgreSQL via Prisma 6 |
+| Database | Render-managed PostgreSQL 17 via Prisma 6 |
+| Hosting | Render Docker web service (Century workspace); auto-deploy on `main` |
 | Config name / handle | `WishlistFu` / `save-for-later-wishlist` (`shopify.app.toml`) |
 
 ## Configuration
@@ -89,7 +90,7 @@ See [`.env.example`](.env.example). Never commit `.env`.
 
 | Variable | Purpose |
 |---|---|
-| `DATABASE_URL` | Postgres connection string for Prisma (`Session`, `Wishlist`, unused `Settings`) |
+| `DATABASE_URL` | Postgres connection string for Prisma (`Session`, `Wishlist`, unused `Settings`). Production value comes from the Render-managed database and is set on the wishlist service Environment tab |
 | `SHOPIFY_API_KEY` | App API key (usually provided by `shopify app dev`) |
 | `SHOPIFY_API_SECRET` | App secret (usually provided by `shopify app dev`) |
 | `SHOPIFY_APP_URL` | Public app URL (tunnel in local dev; production host when deployed) |
@@ -106,7 +107,7 @@ Declared scopes in `shopify.app.toml`: `read_products`, `unauthenticated_read_pr
 
 ## Project status
 
-The core wishlist flow and shared grid/cart hearts are in use on Century storefronts. The admin surface is a single read-only dashboard. There is no test suite, no merchant settings UI, no guest wishlist, and no GDPR mandatory webhooks registered in this repo. Some scaffold and earlier Fly/SQLite deploy artifacts remain. See [architecture limitations](docs/architecture.md#limitations-and-known-gaps).
+The core wishlist flow and shared grid/cart hearts are in use on Century storefronts. The admin surface is a single read-only dashboard. The backend runs on Render (Docker web service + managed Postgres 17) with auto-deploy on `main`. There is no test suite, no merchant settings UI, no guest wishlist, and no GDPR mandatory webhooks registered in this repo. Leftover Fly/Litestream files remain for cleanup. See [architecture limitations](docs/architecture.md#limitations-and-known-gaps).
 
 ## Limitations and known gaps
 
@@ -115,7 +116,8 @@ The core wishlist flow and shared grid/cart hearts are in use on Century storefr
 - Admin dashboard is not scoped per shop; it aggregates all installed shops.
 - Uninstall webhook deletes `Session` rows only; `Wishlist` rows are kept.
 - No `customers/data_request`, `customers/redact`, or `shop/redact` webhooks in `shopify.app.toml`.
-- Repo still contains Fly.io / Litestream / SQLite leftovers alongside a Postgres schema and a production `application_url` that points at a hosted web service — confirm the live host with the owner ([docs/deployment.md](docs/deployment.md)).
+- Fly.io / Litestream / SQLite files in the repo are leftovers (not the production path); see [docs/deployment.md](docs/deployment.md).
+- Render may still be linked to the old `UribeJr` GitHub repo — re-link to Century-Martial-Arts or auto-deploy can stop ([deployment known issue](docs/deployment.md#known-issue-github-repository-link)).
 
 ## Repo map
 
@@ -125,7 +127,7 @@ app/shopify.server.js       Shopify app auth and session storage
 app/db.server.js            Prisma client singleton
 extensions/wishlist-icon/   theme app extension (blocks, assets, locales)
 prisma/                     schema + PostgreSQL migration
-Dockerfile                  production container (docker-start → migrate + serve)
+Dockerfile                  Render production image (docker-start → migrate + serve)
 shopify.app.toml            Partners app config (name, URL, scopes, webhooks)
 docs/                       setup, architecture, getting started, extensions, API, deploy
 APP_OVERVIEW.md             short pointer to docs (legacy overview consolidated)
